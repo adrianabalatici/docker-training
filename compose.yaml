@@ -1,0 +1,58 @@
+version: '3.8'
+services:
+  frontend:
+    # Building the frontend image from the Dockerfile in the frontend directory if the image does not exist locally
+    build:
+      context: ./task-management-app
+      #target: devasd # Target the dev stage in the Dockerfile
+    restart: always # Restart the container if it stops
+    ports:
+      - "4200:4200"
+    # Set the BACKEND_API environment variable to http://localhost:3000
+    environment:
+      BACKEND_API: http://localhost:3000
+    # Connect the frontend service to the frontend network to separate it from the backend and the DB
+    networks:
+      - frontend
+    # Depend on the backend service to ensure that the backend is started before the frontend
+    depends_on:
+      - backend
+    # Bind the frontend directory to the /app directory in the container to allow live reloading of the frontend code
+    volumes:
+      - type: bind
+        source: ./task-management-app
+        target: /app
+  db:
+    image: mongo:latest
+    restart: always
+    expose:
+      - 27017
+    volumes:
+      - mongo_data:/data/db
+    networks:
+      - backend
+
+  backend:
+    build:
+      context: ./task-management-api
+    restart: always
+    ports:
+      - "3000:3000"
+    networks:
+      - frontend
+      - backend
+    environment:
+      - MONGODB_URI=mongodb://db:27017/users
+    depends_on:
+      - db
+    volumes:
+      - type: bind
+        source: ./task-management-api
+        target: /app
+
+networks:
+  backend: {}
+  frontend: {}
+
+volumes:
+  mongo_data: {}
